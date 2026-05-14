@@ -1,0 +1,2 @@
+# AlgoFX använder bara Pythons standardbibliotek
+# Inga externa paket krävs
