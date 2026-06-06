@@ -18,7 +18,7 @@
 html,body{height:100%;background:var(--bg0);color:var(--text);font-family:var(--font);}
 
 /* ── LAYOUT ─────────────────────────────────── */
-#app{height:100vh;grid-template-rows:54px 1fr;grid-template-columns:185px 1fr 265px;}
+#app{display:grid;height:100vh;grid-template-rows:54px 1fr;grid-template-columns:185px 1fr 265px;}
 #login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;}
 
 /* ── HEADER ─────────────────────────────────── */
@@ -172,11 +172,12 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
   <div class="login-box">
     <div class="login-title">ALGO<em>FX</em></div>
     <div class="login-sub">IG GROUP — DEMO AUTOTRADER</div>
-    <div class="proxy-status checking" id="proxy-status">⟳ &nbsp;Ansluter till server...</div>
+    <div class="proxy-status checking" id="proxy-status">⟳ &nbsp;Kontrollerar Python-proxyn...</div>
     <div class="note" id="proxy-note" style="display:none">
-      <strong>Servern svarar inte!</strong><br>
-      Lokalt: kör <code>python server.py</code><br>
-      Railway: kontrollera att tjänsten är igång på railway.app
+      <strong>Proxyn är inte igång!</strong><br>
+      Öppna ett nytt terminalfönster och kör:<br>
+      <code>python ig_proxy.py</code><br>
+      Ladda sedan om sidan (F5).
     </div>
     <div class="note">
       <strong>📋 Skaffa IG Demo API-nyckel:</strong><br>
@@ -201,7 +202,7 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
 </div>
 
 <!-- TRADING APP -->
-<div id="app" style="display:none;grid-template-rows:54px 1fr;grid-template-columns:185px 1fr 265px;">
+<div id="app" style="display:none">
   <!-- Scan bar -->
   <div id="scan-bar" style="display:none;grid-column:1/-1;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--purple));animation:scanm 1s linear infinite;"></div>
 
@@ -220,9 +221,16 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
     </div>
   </header>
 
+  <!-- Live positions banner -->
+  <div id="pos-banner" style="grid-column:1/-1;display:none;align-items:center;gap:12px;padding:6px 18px;background:#0a1f0a;border-bottom:1px solid #1a4a1a;font-family:var(--mono);font-size:.72rem;overflow-x:auto;white-space:nowrap">
+    <span style="color:#00e676;font-weight:700">● ÖPPNA POSITIONER:</span>
+    <span id="banner-content"></span>
+    <button onclick="setTabByName('positions')" style="margin-left:auto;background:none;border:1px solid #1a4a1a;color:#00e676;font-family:var(--mono);font-size:.65rem;padding:2px 8px;border-radius:2px;cursor:pointer">VISA ALLA →</button>
+  </div>
+
   <!-- Sidebar -->
   <aside class="sb">
-    <div class="sb-lbl">Valutapar</div>
+    <div class="sb-lbl">Valutapar & Råvaror</div>
     <div id="pair-list"></div>
   </aside>
 
@@ -246,10 +254,11 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
 
     <!-- Chart / Positions / History -->
     <div class="card">
-      <div class="tabs">
-        <div class="tab a" onclick="setTab('chart',this)">CHART</div>
-        <div class="tab" onclick="setTab('positions',this)">POSITIONER</div>
-        <div class="tab" onclick="setTab('history',this)">HISTORIK</div>
+      <div class="tabs" id="main-tabs">
+        <div class="tab a" data-tab="chart">CHART</div>
+        <div class="tab" data-tab="positions">POSITIONER</div>
+        <div class="tab" data-tab="history">HISTORIK</div>
+        <div class="tab" data-tab="epics">EPICS</div>
         <button id="refresh-pos-btn" style="display:none;margin-left:auto;margin-right:8px;font-size:.62rem;background:none;border:none;color:var(--muted);cursor:pointer" onclick="refreshPositions()">⟳ UPPDATERA</button>
       </div>
       <div id="tab-chart">
@@ -296,6 +305,31 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
       <div id="tab-history" style="display:none;max-height:400px;overflow-y:auto">
         <div id="hist-full-wrap"></div>
       </div>
+
+      <!-- EPICS TAB -->
+      <div id="tab-epics" style="display:none">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <input id="epic-search" type="text" placeholder="Sök instrument... (t.ex. EUR, Gold, USD)"
+            style="flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text);
+            font-family:var(--mono);font-size:.78rem;padding:6px 10px;border-radius:2px;outline:none"/>
+          <button id="epic-search-btn"
+            style="padding:6px 14px;background:var(--accent);color:#000;font-family:var(--font);
+            font-size:.78rem;font-weight:700;border:none;border-radius:2px;cursor:pointer;letter-spacing:1px">
+            SÖK
+          </button>
+          <button id="epic-load-all-btn"
+            style="padding:6px 14px;background:var(--bg3);color:var(--muted);font-family:var(--mono);
+            font-size:.72rem;border:1px solid var(--border);border-radius:2px;cursor:pointer">
+            LADDA FOREX+GULD
+          </button>
+        </div>
+        <div style="padding:4px 14px;font-size:.62rem;color:var(--muted);font-family:var(--mono)">
+          Klicka på ✅ för att sätta epic som aktiv för ett par
+        </div>
+        <div id="epics-table-wrap" style="max-height:350px;overflow-y:auto">
+          <div class="empty">Klicka SÖK eller LADDA FOREX+GULD</div>
+        </div>
+      </div>
     </div>
 
     <!-- Manual trade -->
@@ -310,6 +344,9 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
           <button class="buy-btn" onclick="manualTrade('BUY')">▲ KÖP</button>
           <button class="sell-btn" onclick="manualTrade('SELL')">▼ SÄLJ</button>
         </div>
+        <button id="test-epics-btn" style="width:100%;margin-top:6px;padding:6px;background:var(--bg3);color:var(--muted);font-family:var(--mono);font-size:.7rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;letter-spacing:1px" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+          🔍 TEST AKTIVA EPICS
+        </button>
       </div>
     </div>
   </main>
@@ -329,7 +366,7 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
         </div>
         <input type="range" id="aggr-slider" min="1" max="5" value="3" step="1"
           style="width:100%;accent-color:var(--accent);cursor:pointer"
-          oninput="setAggression(this.value)" disabled/>
+          oninput="setAggression(this.value)"/>
         <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--muted);margin-top:3px">
           <span>Försiktig</span><span>Balanserad</span><span>Aggressiv</span>
         </div>
@@ -360,10 +397,12 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
         ▸ RSI(14) — momentumfilter<br>
         ▸ MACD crossover — trend<br>
         ▸ Bollinger Bands — volatilitet<br>
-        ▸ SMA20/50 — trendfilter<br>
+        ▸ SMA20/50/200 — trendfilter<br>
+        ▸ EMA9/21 — guldkorsning<br>
         ▸ Stochastic(14,3) — timing<br>
         ▸ ATR(14) — SL/TP-storlek<br>
-        ▸ Claude AI — slutbeslut
+        ▸ Claude AI — slutbeslut<br>
+        ▸ XAU/USD Spot Gold CFD
       </div>
     </div>
 
@@ -381,17 +420,58 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
 // ══════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════
-// Auto-detect: om appen serveras från Railway, använd samma server som proxy
-// Om öppnad lokalt som fil, använd localhost
-const PROXY = (window.location.protocol === 'file:' || window.location.hostname === 'localhost')
-  ? 'http://localhost:3001'
-  : window.location.origin;
-const PAIR_EPIC = {
-  'EUR/USD':'CS.D.EURUSD.CFD.IP','GBP/USD':'CS.D.GBPUSD.CFD.IP',
-  'USD/JPY':'CS.D.USDJPY.CFD.IP','AUD/USD':'CS.D.AUDUSD.CFD.IP',
-  'USD/CHF':'CS.D.USDCHF.CFD.IP','USD/CAD':'CS.D.USDCAD.CFD.IP',
-  'NZD/USD':'CS.D.NZDUSD.CFD.IP','EUR/GBP':'CS.D.EURGBP.CFD.IP',
+const PROXY = 'http://localhost:3001';
+// Epic-koder — söks automatiskt från ditt konto vid inloggning
+// Fallback till vanliga koder om sökning misslyckas
+let PAIR_EPIC = {
+  'XAU/USD':'CS.D.GOLD.MINI.IP',
+  'EUR/USD':'CS.D.EURUSD.MINI.IP','GBP/USD':'CS.D.GBPUSD.MINI.IP',
+  'USD/JPY':'CS.D.USDJPY.MINI.IP','AUD/USD':'CS.D.AUDUSD.MINI.IP',
+  'USD/CHF':'CS.D.USDCHF.MINI.IP','USD/CAD':'CS.D.USDCAD.MINI.IP',
+  'NZD/USD':'CS.D.NZDUSD.MINI.IP','EUR/GBP':'CS.D.EURGBP.MINI.IP',
 };
+
+// Try multiple epic formats per pair (DFB = Daily Funded Bet, never expires)
+const EPIC_FORMATS = {
+  'EUR/USD': ['CS.D.EURUSD.MINI.IP','CS.D.EURUSD.CFD.IP','IX.D.EURUSD.IFD.IP'],
+  'GBP/USD': ['CS.D.GBPUSD.MINI.IP','CS.D.GBPUSD.CFD.IP'],
+  'USD/JPY': ['CS.D.USDJPY.MINI.IP','CS.D.USDJPY.CFD.IP'],
+  'XAU/USD': ['CS.D.GOLD.MINI.IP','CS.D.GOLD.CFD.IP','IX.D.GOLD.IFD.IP'],
+  'AUD/USD': ['CS.D.AUDUSD.MINI.IP','CS.D.AUDUSD.CFD.IP'],
+  'USD/CHF': ['CS.D.USDCHF.MINI.IP','CS.D.USDCHF.CFD.IP'],
+  'USD/CAD': ['CS.D.USDCAD.MINI.IP','CS.D.USDCAD.CFD.IP'],
+  'NZD/USD': ['CS.D.NZDUSD.MINI.IP','CS.D.NZDUSD.CFD.IP'],
+  'EUR/GBP': ['CS.D.EURGBP.MINI.IP','CS.D.EURGBP.CFD.IP'],
+};
+
+// Alternativa epics att prova om primära inte fungerar
+const PAIR_EPIC_ALT = {
+  'XAU/USD':['CS.D.GOLD.CFD.IP','IX.D.GOLD.IFD.IP','CS.D.GOLD.TODAY.IP'],
+  'EUR/USD':['CS.D.EURUSD.CFD.IP','CS.D.EURUSD.TODAY.IP','IX.D.EURUSD.IFD.IP'],
+  'GBP/USD':['CS.D.GBPUSD.CFD.IP','CS.D.GBPUSD.TODAY.IP'],
+  'USD/JPY':['CS.D.USDJPY.CFD.IP','CS.D.USDJPY.TODAY.IP'],
+  'AUD/USD':['CS.D.AUDUSD.CFD.IP','CS.D.AUDUSD.TODAY.IP'],
+  'USD/CHF':['CS.D.USDCHF.CFD.IP','CS.D.USDCHF.TODAY.IP'],
+  'USD/CAD':['CS.D.USDCAD.CFD.IP','CS.D.USDCAD.TODAY.IP'],
+  'NZD/USD':['CS.D.NZDUSD.CFD.IP','CS.D.NZDUSD.TODAY.IP'],
+  'EUR/GBP':['CS.D.EURGBP.CFD.IP','CS.D.EURGBP.TODAY.IP'],
+};
+
+// Guld-specifika inställningar
+const GOLD_PAIRS = ['XAU/USD'];
+const COMMODITY_PAIRS = ['XAU/USD'];
+
+function isGold(pair){ return pair==='XAU/USD'; }
+function getPip(pair){ 
+  if(isGold(pair)) return 0.1;      // Guld: 1 pip = $0.10
+  if(pair.includes('JPY')) return 0.01;
+  return 0.0001;
+}
+function getDecimals(pair){
+  if(isGold(pair)) return 2;        // Guld: 1923.45
+  if(pair.includes('JPY')) return 3;
+  return 5;
+}
 const PAIRS = Object.keys(PAIR_EPIC);
 
 // ══════════════════════════════════════════════════
@@ -400,22 +480,51 @@ const PAIRS = Object.keys(PAIR_EPIC);
 let igCST=null,igToken=null,igApiKey=null;
 let candles={},snapshots={},positions=[],history=[];
 let selected='EUR/USD';
-let botRunning=false,scanning=false,sigThreshold=0.15;
+let botRunning=false,scanning=false,currentTab='chart',sigThreshold=0.15;
 let botTimer=null,countdownTimer=null,nextScan=null,snapshotTimer=null;
 
 // ══════════════════════════════════════════════════
 //  IG API
 // ══════════════════════════════════════════════════
-async function igReq(method,path,body,version='1'){
+async function igReq(method,path,body,version='1',isRetry=false){
   const h={'Content-Type':'application/json','X-IG-API-KEY':igApiKey,'Version':version};
   if(igCST) h['CST']=igCST;
   if(igToken) h['X-SECURITY-TOKEN']=igToken;
   const res=await fetch(PROXY+path,{method,headers:h,body:body?JSON.stringify(body):undefined});
   const cst=res.headers.get('CST'),tok=res.headers.get('X-SECURITY-TOKEN');
   if(cst) igCST=cst; if(tok) igToken=tok;
-  const data=await res.json();
-  if(!res.ok) throw new Error(data?.errorCode||data?.error||'HTTP '+res.status);
+  const text=await res.text();
+  const data=text?JSON.parse(text):{};
+  // Auto-reconnect on expired token
+  if(!res.ok){
+    const err=data?.errorCode||data?.error||'HTTP '+res.status;
+    if(!isRetry && (err.includes('client-token-invalid')||err.includes('token')||err.includes('security'))){
+      addLog('🔄 Session utgången — återansluter...','scan');
+      const ok=await relogin();
+      if(ok) return igReq(method,path,body,version,true); // retry once
+    }
+    throw new Error(err);
+  }
   return data;
+}
+
+// Stored credentials for auto-reconnect
+let savedCreds={key:'',user:'',pass:''};
+
+async function relogin(){
+  try{
+    const k=savedCreds.key||localStorage.getItem('ig_key');
+    const u=savedCreds.user||localStorage.getItem('ig_user');
+    const p=savedCreds.pass||localStorage.getItem('ig_pass');
+    if(!k||!u||!p) return false;
+    igApiKey=k;
+    const session=await igReq('POST','/session',{identifier:u,password:p,encryptedPassword:false},'2',true);
+    addLog('✅ Session förnyad automatiskt','system');
+    return true;
+  }catch(e){
+    addLog('❌ Auto-reconnect misslyckades: '+e.message,'error');
+    return false;
+  }
 }
 async function igLogin(k,u,p){igApiKey=k;return igReq('POST','/session',{identifier:u,password:p,encryptedPassword:false},'2');}
 async function igGetAccounts(){return igReq('GET','/accounts',null,'1');}
@@ -423,11 +532,212 @@ async function igGetSnapshot(epics){return igReq('GET','/markets?epics='+epics.j
 async function igGetPrices(epic){return igReq('GET','/prices/'+epic+'?resolution=MINUTE_5&max=100',null,'3');}
 async function igGetPositions(){return igReq('GET','/positions',null,'2');}
 async function igGetConfirm(ref){return igReq('GET','/confirms/'+ref,null,'1');}
+
+async function igSearchEpic(term){
+  return igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+}
+
+// Automatically find working epics for this account
+async function autoFindWorkingEpics(){
+  addLog('🔍 Söker handlingsbara instrument...','scan');
+  // Search for each pair and find tradeable epics
+  const searches={
+    'EUR/USD':'EUR/USD','GBP/USD':'GBP/USD','USD/JPY':'USD/JPY',
+    'AUD/USD':'AUD/USD','USD/CHF':'USD/CHF','USD/CAD':'USD/CAD',
+    'NZD/USD':'NZD/USD','EUR/GBP':'EUR/GBP','XAU/USD':'Gold'
+  };
+  for(const [pair,term] of Object.entries(searches)){
+    try{
+      const res=await igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+      const markets=(res.markets||[]).filter(m=>m.marketStatus==='TRADEABLE');
+      if(markets.length){
+        const best=markets[0];
+        PAIR_EPIC[pair]=best.epic;
+        // Also add to EPIC_FORMATS
+        if(!EPIC_FORMATS[pair]) EPIC_FORMATS[pair]=[];
+        markets.slice(0,3).forEach(m=>{
+          if(!EPIC_FORMATS[pair].includes(m.epic)) EPIC_FORMATS[pair].unshift(m.epic);
+        });
+        addLog('✅ '+pair+' → '+best.epic,'system');
+      }
+    }catch(e){}
+    await sleep(500);
+  }
+}
+
+async function discoverEpics(){
+  addLog('🔍 Söker aktiva epic-koder...','scan');
+  const searches={
+    'EUR/USD':['EUR/USD','EURUSD spot'],
+    'GBP/USD':['GBP/USD','GBPUSD spot'],
+    'USD/JPY':['USD/JPY','USDJPY spot'],
+    'XAU/USD':['Gold spot','XAUUSD','Gold'],
+    'AUD/USD':['AUD/USD','AUDUSD spot'],
+    'USD/CHF':['USD/CHF','USDCHF spot'],
+    'USD/CAD':['USD/CAD','USDCAD spot'],
+    'NZD/USD':['NZD/USD','NZDUSD spot'],
+    'EUR/GBP':['EUR/GBP','EURGBP spot'],
+  };
+  let found=0;
+  for(const [pair,terms] of Object.entries(searches)){
+    let matched=false;
+    for(const term of terms){
+      if(matched) break;
+      try{
+        const res=await igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+        const markets=res.markets||[];
+        // Prefer: tradeable + streaming + NOT rolled (no expiry date in name)
+        const best=
+          markets.find(m=>m.streamingPricesAvailable&&m.marketStatus==='TRADEABLE'&&
+            !(m.epic&&m.epic.includes('TODAY'))&&  // exclude today contracts
+            (m.instrumentType==='CURRENCIES'||m.instrumentType==='COMMODITIES')
+          )||
+          markets.find(m=>m.streamingPricesAvailable&&m.marketStatus==='TRADEABLE')||
+          markets.find(m=>m.streamingPricesAvailable)||
+          markets[0];
+        if(best&&best.epic){
+          PAIR_EPIC[pair]=best.epic;
+          found++; matched=true;
+          addLog('✅ '+pair+' → '+best.epic+' ('+best.marketStatus+')','system');
+        }
+      }catch(e){}
+      await sleep(400);
+    }
+    if(!matched) addLog('⚠ Hittade ej epic för '+pair,'error');
+  }
+  addLog('✅ '+found+'/'+Object.keys(searches).length+' epics klara','system');
+}
+
+
+async function relogin(){
+  try{
+    const k=savedCreds.key||localStorage.getItem('ig_key');
+    const u=savedCreds.user||localStorage.getItem('ig_user');
+    const p=savedCreds.pass||localStorage.getItem('ig_pass');
+    if(!k||!u||!p) return false;
+    igApiKey=k;
+    const session=await igReq('POST','/session',{identifier:u,password:p,encryptedPassword:false},'2',true);
+    addLog('✅ Session förnyad automatiskt','system');
+    return true;
+  }catch(e){
+    addLog('❌ Auto-reconnect misslyckades: '+e.message,'error');
+    return false;
+  }
+}
+async function igLogin(k,u,p){igApiKey=k;return igReq('POST','/session',{identifier:u,password:p,encryptedPassword:false},'2');}
+async function igGetAccounts(){return igReq('GET','/accounts',null,'1');}
+async function igGetSnapshot(epics){return igReq('GET','/markets?epics='+epics.join(','),null,'1');}
+async function igGetPrices(epic){return igReq('GET','/prices/'+epic+'?resolution=MINUTE_5&max=100',null,'3');}
+async function igGetPositions(){return igReq('GET','/positions',null,'2');}
+async function igGetConfirm(ref){return igReq('GET','/confirms/'+ref,null,'1');}
+
+async function igSearchEpic(term){
+  return igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+}
+
+// Automatically find working epics for this account
+async function autoFindWorkingEpics(){
+  addLog('🔍 Söker handlingsbara instrument...','scan');
+  // Search for each pair and find tradeable epics
+  const searches={
+    'EUR/USD':'EUR/USD','GBP/USD':'GBP/USD','USD/JPY':'USD/JPY',
+    'AUD/USD':'AUD/USD','USD/CHF':'USD/CHF','USD/CAD':'USD/CAD',
+    'NZD/USD':'NZD/USD','EUR/GBP':'EUR/GBP','XAU/USD':'Gold'
+  };
+  for(const [pair,term] of Object.entries(searches)){
+    try{
+      const res=await igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+      const markets=(res.markets||[]).filter(m=>m.marketStatus==='TRADEABLE');
+      if(markets.length){
+        const best=markets[0];
+        PAIR_EPIC[pair]=best.epic;
+        // Also add to EPIC_FORMATS
+        if(!EPIC_FORMATS[pair]) EPIC_FORMATS[pair]=[];
+        markets.slice(0,3).forEach(m=>{
+          if(!EPIC_FORMATS[pair].includes(m.epic)) EPIC_FORMATS[pair].unshift(m.epic);
+        });
+        addLog('✅ '+pair+' → '+best.epic,'system');
+      }
+    }catch(e){}
+    await sleep(500);
+  }
+}
+
+async function discoverEpics(){
+  addLog('🔍 Söker rätt epic-koder för ditt konto...','scan');
+  // Search terms mapped to pair names for precise matching
+  const searches = {
+    'EUR/USD':['EUR/USD','EURUSD'],
+    'GBP/USD':['GBP/USD','GBPUSD'],
+    'USD/JPY':['USD/JPY','USDJPY'],
+    'XAU/USD':['Gold','XAU/USD','XAUUSD'],
+    'AUD/USD':['AUD/USD','AUDUSD'],
+    'USD/CHF':['USD/CHF','USDCHF'],
+    'USD/CAD':['USD/CAD','USDCAD'],
+    'NZD/USD':['NZD/USD','NZDUSD'],
+    'EUR/GBP':['EUR/GBP','EURGBP'],
+  };
+  let found=0;
+  for(const [pair,terms] of Object.entries(searches)){
+    let matched=false;
+    for(const term of terms){
+      if(matched) break;
+      try{
+        const res=await igSearchEpic(term);
+        const markets=res.markets||[];
+        // Prioritize: tradeable + CFD + correct instrument type
+        const match=markets.find(m=>
+          m.streamingPricesAvailable&&
+          (m.instrumentType==='CURRENCIES'||m.instrumentType==='COMMODITIES')
+        )||markets.find(m=>m.streamingPricesAvailable)
+        ||markets[0];
+        if(match&&match.epic){
+          PAIR_EPIC[pair]=match.epic;
+          found++;
+          matched=true;
+          addLog('✅ '+pair+' → '+match.epic,'system');
+        }
+      }catch(e){}
+      await sleep(400);
+    }
+    if(!matched) addLog('⚠ Hittade ej epic för '+pair,'error');
+  }
+  addLog('🔍 Epic-sökning klar: '+found+'/'+Object.keys(searches).length+' par','system');
+}
 async function igOpenPos(epic,dir,size,sl,tp){
   return igReq('POST','/positions/otc',{epic,direction:dir,size:String(size),expiry:'-',orderType:'MARKET',timeInForce:'FILL_OR_KILL',guaranteedStop:false,forceOpen:true,stopDistance:String(sl),limitDistance:String(tp),currencyCode:'USD'},'2');
 }
-async function igClosePos(dealId,dir,size){
-  return igReq('DELETE','/positions/otc',{dealId,direction:dir==='BUY'?'SELL':'BUY',size:String(size),orderType:'MARKET',timeInForce:'FILL_OR_KILL'},'2');
+async function igClosePos(pos){
+  const body={
+    dealId:   pos.id,
+    epic:     pos.epic,
+    expiry:   '-',
+    direction: pos.dir==='BUY'?'SELL':'BUY',
+    size:     String(pos.size),
+    orderType:'MARKET',
+    timeInForce:'FILL_OR_KILL',
+  };
+  // IG needs _method:DELETE header for some account types
+  const h={'Content-Type':'application/json','X-IG-API-KEY':igApiKey,'Version':'2',
+           '_method':'DELETE'};
+  if(igCST)   h['CST']=igCST;
+  if(igToken) h['X-SECURITY-TOKEN']=igToken;
+  // Try DELETE first, fall back to POST with _method header
+  const res=await fetch(PROXY+'/positions/otc',{method:'DELETE',headers:h,body:JSON.stringify(body)});
+  const cst=res.headers.get('CST'),tok=res.headers.get('X-SECURITY-TOKEN');
+  if(cst) igCST=cst; if(tok) igToken=tok;
+  const text=await res.text();
+  const data=text?JSON.parse(text):{};
+  if(res.status===404||res.status===405){
+    // Fallback: POST with _method DELETE
+    addLog('↩ Försöker POST-metod för stängning...','scan');
+    const h2={...h,'_method':'DELETE'};
+    const res2=await fetch(PROXY+'/positions/otc',{method:'POST',headers:h2,body:JSON.stringify(body)});
+    const text2=await res2.text();
+    return text2?JSON.parse(text2):{};
+  }
+  if(!res.ok) throw new Error(data?.errorCode||data?.error||'HTTP '+res.status);
+  return data;
 }
 
 // ══════════════════════════════════════════════════
@@ -440,19 +750,50 @@ function calcMacd(cl){const e12=ema(cl,12),e26=ema(cl,26),line=e12.map((v,i)=>v-
 function calcBB(cl,p=20,m=2){const mid=sma(cl,p);return cl.map((_,i)=>{if(i<p-1)return{u:null,m:null,l:null};const sl=cl.slice(i-p+1,i+1),mn=mid[i],sd=Math.sqrt(sl.reduce((s,v)=>s+(v-mn)**2,0)/p);return{u:mn+m*sd,m:mn,l:mn-m*sd};});}
 function calcStoch(cs,kp=14,dp=3){const k=cs.map((_,i)=>{if(i<kp-1)return null;const sl=cs.slice(i-kp+1,i+1),hi=Math.max(...sl.map(c=>c.high)),lo=Math.min(...sl.map(c=>c.low));return((cs[i].close-lo)/(hi-lo||1e-9))*100;});return{k,d:sma(k.map(v=>v??50),dp)};}
 function calcAtr(cs,p=14){return sma(cs.map((c,i)=>i===0?c.high-c.low:Math.max(c.high-c.low,Math.abs(c.high-cs[i-1].close),Math.abs(c.low-cs[i-1].close))),p);}
-function computeAll(cs){const cl=cs.map(c=>c.close);return{cl,sma20:sma(cl,20),sma50:sma(cl,50),rsi:calcRsi(cl),macd:calcMacd(cl),bb:calcBB(cl),stoch:calcStoch(cs),atr:calcAtr(cs)};}
-function computeSignal(ind,n){
+function computeAll(cs,pair){
+  const cl=cs.map(c=>c.close);
+  const base={cl,sma20:sma(cl,20),sma50:sma(cl,50),rsi:calcRsi(cl),macd:calcMacd(cl),bb:calcBB(cl),stoch:calcStoch(cs),atr:calcAtr(cs)};
+  if(pair&&isGold(pair)){
+    base.sma200=sma(cl,200);
+    base.ema9=ema(cl,9);
+    base.ema21=ema(cl,21);
+  }
+  return base;
+}
+function computeSignal(ind,n,pair){
   let bull=0,bear=0;
   const r=ind.rsi[n],m=ind.macd,b=ind.bb[n],p=ind.cl[n];
-  if(r!=null){if(r<35)bull+=2;else if(r>65)bear+=2;}
+  const gold=pair&&isGold(pair);
+
+  // RSI — guld använder bredare zoner (guld trendar länge)
+  const rsiOB=gold?75:65, rsiOS=gold?28:35;
+  if(r!=null){if(r<rsiOS)bull+=2;else if(r>rsiOB)bear+=2;}
+
+  // MACD
   if(m.hist[n]>0&&m.hist[n]>m.hist[n-1])bull+=2;else if(m.hist[n]<0&&m.hist[n]<m.hist[n-1])bear+=2;
   if(m.line[n]>m.signal[n]&&m.line[n-1]<=m.signal[n-1])bull+=3;
   if(m.line[n]<m.signal[n]&&m.line[n-1]>=m.signal[n-1])bear+=3;
-  const s20=ind.sma20[n],s50=ind.sma50[n];
+
+  // SMA trend
+  const s20=ind.sma20[n],s50=ind.sma50[n],s200=ind.sma200&&ind.sma200[n];
   if(s20&&s50){if(p>s20&&s20>s50)bull+=2;if(p<s20&&s20<s50)bear+=2;}
+  // Guld: SMA200 är extra viktigt
+  if(gold&&s200){if(p>s200)bull+=2;else bear+=2;}
+
+  // Bollinger
   if(b.l&&p<=b.l)bull+=2;if(b.u&&p>=b.u)bear+=2;
+
+  // Stochastic
   const sk=ind.stoch.k[n],sd=ind.stoch.d[n];
   if(sk!=null&&sd!=null){if(sk<25&&sk>sd)bull+=1;if(sk>75&&sk<sd)bear+=1;}
+
+  // Guld: EMA9 vs EMA21 crossover (snabb signal)
+  if(gold&&ind.ema9&&ind.ema21){
+    const e9=ind.ema9[n],e21=ind.ema21[n],e9p=ind.ema9[n-1],e21p=ind.ema21[n-1];
+    if(e9>e21&&e9p<=e21p)bull+=3; // Gyllene korsning
+    if(e9<e21&&e9p>=e21p)bear+=3; // Dödskorsning
+  }
+
   return{bull,bear,score:(bull-bear)/Math.max(bull+bear,4)};
 }
 
@@ -460,8 +801,9 @@ function computeSignal(ind,n){
 //  CLAUDE AI
 // ══════════════════════════════════════════════════
 async function queryAI(pair,ind,n,sig){
-  const jp=pair.includes('JPY'),f=(v,d)=>v!=null?v.toFixed(d):'N/A',p=ind.cl[n];
-  const prompt='Forex-trader. Analysera '+pair+'.\nPRIS:'+f(p,jp?3:5)+' RSI:'+f(ind.rsi[n],1)+' MACD-hist:'+f(ind.macd.hist[n],6)+' SMA20:'+f(ind.sma20[n],jp?3:5)+' SMA50:'+f(ind.sma50[n],jp?3:5)+' BB-övre:'+f(ind.bb[n]&&ind.bb[n].u,jp?3:5)+' BB-undre:'+f(ind.bb[n]&&ind.bb[n].l,jp?3:5)+' Stoch-K:'+f(ind.stoch.k[n],1)+' ATR:'+f(ind.atr[n],jp?3:5)+' Bull='+sig.bull+' Bear='+sig.bear+'\nSvara ENBART JSON (inga backticks): {"action":"BUY|SELL|HOLD","confidence":0-100,"reason":"max 20 ord","sl_pips":number,"tp_pips":number}';
+  const gold=isGold(pair),jp=pair.includes('JPY'),dec=getDecimals(pair),f=(v,d)=>v!=null?v.toFixed(d):'N/A',p=ind.cl[n];
+  const assetType=gold?'GULD (XAU/USD CFD)':'FOREX';
+  const prompt='Du är en professionell '+assetType+'-trader. Analysera '+pair+'.\nPRIS:'+f(p,dec)+' RSI:'+f(ind.rsi[n],1)+' MACD-hist:'+f(ind.macd.hist[n],6)+' SMA20:'+f(ind.sma20[n],dec)+' SMA50:'+f(ind.sma50[n],dec)+(gold&&ind.sma200?' SMA200:'+f(ind.sma200[n],dec):'')+' BB-övre:'+f(ind.bb[n]&&ind.bb[n].u,dec)+' BB-undre:'+f(ind.bb[n]&&ind.bb[n].l,dec)+(gold&&ind.ema9?' EMA9:'+f(ind.ema9[n],dec)+' EMA21:'+f(ind.ema21[n],dec):'')+' Stoch-K:'+f(ind.stoch.k[n],1)+' ATR:'+f(ind.atr[n],dec)+' Bull='+sig.bull+' Bear='+sig.bear+(gold?' [Guld: SL minst 200 pips, TP minst 400 pips]':'')+'\nSvara ENBART JSON (inga backticks): {"action":"BUY|SELL|HOLD","confidence":0-100,"reason":"max 20 ord","sl_pips":number,"tp_pips":number}';
   const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:prompt}]})});
   const data=await res.json();
   const text=data.content&&data.content.map(c=>c.text||'').join('')||'{}';
@@ -475,7 +817,7 @@ async function queryAI(pair,ind,n,sig){
 function drawChart(){
   const cs=(candles[selected]||[]).slice(-80);
   if(cs.length<5) return;
-  const ind=computeAll(cs);
+  const ind=computeAll(cs,selected);
   const cvs=document.getElementById('chart-canvas');
   const ctx=cvs.getContext('2d');
   const W=cvs.width,H=cvs.height;
@@ -560,74 +902,138 @@ function setTab(name,el){
   });
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('a'));
   if(el) el.classList.add('a');
+  currentTab=name;
   const rb=document.getElementById('refresh-pos-btn');
   if(rb) rb.style.display=name==='positions'?'inline-block':'none';
   if(name==='positions'){refreshPositions();renderPositionsTab();}
   if(name==='history') renderHistoryFull();
+  if(name==='epics') initEpicsTab();
 }
 
 function renderPairList(){
   const list=document.getElementById('pair-list');
   if(!list) return;
+
+  // Use event delegation — one listener on container
+  if(!list._hasClickHandler){
+    list.addEventListener('click', function(e){
+      const row=e.target.closest('[data-pair]');
+      if(row) selectPair(row.getAttribute('data-pair'));
+    });
+    list._hasClickHandler=true;
+  }
+
   list.innerHTML='';
   PAIRS.forEach(pair=>{
     const arr=candles[pair]||[],snap=snapshots[pair]||{};
     const price=snap.mid||(arr.length?arr[arr.length-1].close:0);
-    const chg=snap.change||0,hasPos=positions.some(p=>p.pair===pair),jp=pair.includes('JPY');
+    const chg=snap.change||0;
+    const hasPos=positions.some(p=>p.pair===pair);
+    const dec=getDecimals(pair);
+    const isSelected=pair===selected;
+    const chgColor=chg>=0?'var(--green)':'var(--red)';
+    const nameColor=hasPos?'var(--gold)':'var(--text)';
+
     const row=document.createElement('div');
-    row.className='pair-row'+(pair===selected?' sel':'');
-    row.onclick=()=>selectPair(pair);
-    row.innerHTML='<div><div class="pair-name" style="color:'+(hasPos?'var(--gold)':'var(--text)')+'">'+
-      (hasPos?'● ':'')+pair+'</div>'+
-      '<div class="pair-price">'+price.toFixed(jp?3:5)+'</div></div>'+
-      '<div style="text-align:right"><canvas class="spark" width="72" height="24"></canvas>'+
-      '<div class="pair-chg" style="color:'+(chg>=0?'var(--green)':'var(--red)')+'">'+
-      (chg>=0?'+':'')+chg.toFixed(3)+'%</div></div>';
+    row.className='pair-row'+(isSelected?' sel':'');
+    row.setAttribute('data-pair', pair);
+    row.style.cursor='pointer';
+    row.innerHTML=
+      '<div>'+
+        '<div class="pair-name" style="color:'+nameColor+'">'+
+          (hasPos?'● ':'')+pair+
+        '</div>'+
+        '<div class="pair-price">'+price.toFixed(dec)+'</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<canvas width="72" height="24" style="display:block"></canvas>'+
+        '<div class="pair-chg" style="color:'+chgColor+'">'+
+          (chg>=0?'+':'')+chg.toFixed(3)+'%'+
+        '</div>'+
+      '</div>';
+
     list.appendChild(row);
-    if(arr.length>2) drawSpark(row.querySelector('canvas'),arr.slice(-20).map(c=>c.close),chg>=0);
+
+    // Draw sparkline
+    if(arr.length>2){
+      const canvas=row.querySelector('canvas');
+      if(canvas) drawSpark(canvas, arr.slice(-20).map(c=>c.close), chg>=0);
+    }
+  });
+}
+
+function setTabByName(name){
+  const tabs=document.querySelectorAll('[data-tab]');
+  tabs.forEach(t=>{
+    if(t.getAttribute('data-tab')===name) setTab(name,t);
   });
 }
 
 function selectPair(pair){selected=pair;renderPairList();updateHeader();}
 
 function updateHeader(){
-  const pair=selected,snap=snapshots[pair]||{},jp=pair.includes('JPY');
-  const cs=candles[pair]||[],n=cs.length-1;
+  const pair=selected, snap=snapshots[pair]||{};
+  const cs=candles[pair]||[], n=cs.length-1;
+  const dec=getDecimals(pair);
   const price=snap.mid||(cs.length?cs[n].close:0);
   const chg=snap.change||0;
+
   const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val;};
-  const setStyle=(id,val,prop)=>{const e=document.getElementById(id);if(e)e.style[prop]=val;};
-  set('sel-price',price.toFixed(jp?3:5));
-  set('sel-pair',pair);set('manual-pair',pair);
+
+  set('sel-price', price.toFixed(dec));
+  set('sel-pair',  pair);
+  set('manual-pair', pair);
+
   const chgEl=document.getElementById('sel-chg');
-  if(chgEl){chgEl.textContent=(chg>=0?'▲':'▼')+' '+Math.abs(chg).toFixed(4)+'%';chgEl.style.color=chg>=0?'var(--green)':'var(--red)';}
+  if(chgEl){
+    chgEl.textContent=(chg>=0?'▲':'▼')+' '+Math.abs(chg).toFixed(4)+'%';
+    chgEl.style.color=chg>=0?'var(--green)':'var(--red)';
+  }
   if(snap.bid&&snap.ask){
-    set('sel-bidask','Bid:'+snap.bid.toFixed(jp?3:5)+' Ask:'+snap.ask.toFixed(jp?3:5));
-    set('spread-info','Spread: '+((snap.ask-snap.bid)/(jp?0.01:0.0001)).toFixed(1)+'p');
+    set('sel-bidask','Bid:'+snap.bid.toFixed(dec)+' Ask:'+snap.ask.toFixed(dec));
+    set('spread-info','Spread: '+((snap.ask-snap.bid)/getPip(pair)).toFixed(1)+'p');
   }
   if(cs.length>60){
-    const ind=computeAll(cs),sig=computeSignal(ind,n);
+    const ind=computeAll(cs,pair), sig=computeSignal(ind,n,pair);
     const sigEl=document.getElementById('sel-signal');
     if(sigEl){
       if(sig.score>0.2){sigEl.textContent='▲ BULL';sigEl.style.color='var(--green)';}
       else if(sig.score<-0.2){sigEl.textContent='▼ BEAR';sigEl.style.color='var(--red)';}
       else{sigEl.textContent='── NEUTRAL';sigEl.style.color='var(--muted)';}
     }
-    updateIndGrid(ind,n,jp);
+    updateIndGrid(ind,n,pair);
   }
   drawChart();
 }
 
-function updateIndGrid(ind,n,jp){
+function updateIndGrid(ind,n,pair){
   const g=document.getElementById('ind-grid');if(!g)return;
-  const r=ind.rsi[n],mh=ind.macd.hist[n];
-  const items=[
-    ['RSI 14',r!=null?r.toFixed(1):'—',r>70?'var(--red)':r<30?'var(--green)':'var(--text)'],
-    ['MACD Hist',mh!=null?mh.toFixed(5):'—',(mh||0)>0?'var(--green)':'var(--red)'],
-    ['SMA 20',fmt(ind.sma20[n],jp?3:5),'var(--text)'],['SMA 50',fmt(ind.sma50[n],jp?3:5),'var(--text)'],
-    ['BB Övre',fmt(ind.bb[n]&&ind.bb[n].u,jp?3:5),'var(--text)'],['BB Undre',fmt(ind.bb[n]&&ind.bb[n].l,jp?3:5),'var(--text)'],
-    ['Stoch K',fmt(ind.stoch.k[n],1),'var(--text)'],['ATR 14',fmt(ind.atr[n],jp?3:5),'var(--text)'],
+  const r=ind.rsi[n],mh=ind.macd.hist[n],gold=isGold(pair),dec=getDecimals(pair);
+  const rsiColor=r>70?'var(--red)':r<30?'var(--green)':'var(--text)';
+  let items=[
+    ['RSI 14',r!=null?r.toFixed(1):'—',rsiColor],
+    ['MACD Hist',mh!=null?mh.toFixed(gold?4:5):'—',(mh||0)>0?'var(--green)':'var(--red)'],
+    ['SMA 20',fmt(ind.sma20[n],dec),'var(--text)'],
+    ['SMA 50',fmt(ind.sma50[n],dec),'var(--text)'],
+    ['BB Övre',fmt(ind.bb[n]&&ind.bb[n].u,dec),'var(--text)'],
+    ['BB Undre',fmt(ind.bb[n]&&ind.bb[n].l,dec),'var(--text)'],
+    ['Stoch K',fmt(ind.stoch.k[n],1),'var(--text)'],
+    ['ATR 14',fmt(ind.atr[n],dec),'var(--text)'],
   ];
+  if(gold){
+    const e9=ind.ema9&&ind.ema9[n],e21=ind.ema21&&ind.ema21[n];
+    const s200=ind.sma200&&ind.sma200[n],price=ind.cl[n];
+    items=[
+      ['RSI 14',r!=null?r.toFixed(1):'—',rsiColor],
+      ['MACD Hist',mh!=null?mh.toFixed(2):'—',(mh||0)>0?'var(--green)':'var(--red)'],
+      ['EMA 9',fmt(e9,2),e9&&e21?(e9>e21?'var(--green)':'var(--red)'):'var(--text)'],
+      ['EMA 21',fmt(e21,2),'var(--text)'],
+      ['SMA 200',fmt(s200,2),s200?(price>s200?'var(--green)':'var(--red)'):'var(--text)'],
+      ['BB Övre',fmt(ind.bb[n]&&ind.bb[n].u,2),'var(--text)'],
+      ['BB Undre',fmt(ind.bb[n]&&ind.bb[n].l,2),'var(--text)'],
+      ['ATR 14',fmt(ind.atr[n],2),'var(--text)'],
+    ];
+  }
   g.innerHTML=items.map(([l,v,c])=>'<div class="ind-box"><div class="ind-lbl">'+l+'</div><div class="ind-val" style="color:'+c+'">'+v+'</div></div>').join('');
 }
 
@@ -642,6 +1048,31 @@ function updateStats(){
   const oe=document.getElementById('st-open');if(oe)oe.textContent=positions.length;
   const ce=document.getElementById('st-closed');if(ce)ce.textContent=history.length;
   const hp=document.getElementById('hdr-pos');if(hp)hp.textContent=positions.length+'/'+document.getElementById('s-maxpos').value;
+  updateBanner();
+}
+
+function updateBanner(){
+  const banner=document.getElementById('pos-banner');
+  const bc=document.getElementById('banner-content');
+  if(!banner||!bc) return;
+  if(!positions.length){
+    banner.style.display='none';
+    return;
+  }
+  banner.style.display='flex';
+  bc.innerHTML=positions.map(pos=>{
+    const snap=snapshots[pos.pair]||{},price=snap.mid||pos.entry;
+    const pip=getPip(pos.pair),dec=getDecimals(pos.pair);
+    const pips=(pos.dir==='BUY'?(price-pos.entry)/pip:(pos.entry-price)/pip);
+    const pnl=pips*pos.size*10;
+    const col=pnl>=0?'#00e676':'#ff3d57';
+    return '<span style="margin-right:16px;padding:2px 8px;background:#0d2a0d;border:1px solid #1a4a1a;border-radius:2px">'+
+      '<b style="color:'+(pos.dir==='BUY'?'#00e676':'#ff3d57')+'">'+pos.dir+'</b> '+
+      pos.pair+' @ '+Number(pos.entry).toFixed(dec)+
+      ' <b style="color:'+col+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</b>'+
+      ' <button data-closeid="'+pos.id+'" class="banner-close-btn" style="margin-left:6px;background:#1a0000;border:1px solid #4a1a1a;color:#ff3d57;font-family:var(--mono);font-size:.6rem;padding:1px 5px;border-radius:2px;cursor:pointer">✕</button>'+
+    '</span>';
+  }).join('');
 }
 
 // ══════════════════════════════════════════════════
@@ -653,7 +1084,7 @@ function renderSummaryBar(){
   let fp=0;
   positions.forEach(pos=>{
     const snap=snapshots[pos.pair]||{},price=snap.mid||pos.entry;
-    const pip=pos.pair&&pos.pair.includes('JPY')?0.01:0.0001;
+    const pip=getPip(pos.pair),dec=getDecimals(pos.pair);
     fp+=(pos.dir==='BUY'?(price-pos.entry)/pip:(pos.entry-price)/pip)*pos.size*10;
   });
   const rp=history.reduce((s,t)=>s+(t.pnl||0),0);
@@ -671,11 +1102,11 @@ function renderPositions(){
   if(!positions.length){w.innerHTML='<div class="empty">Inga öppna positioner hos IG</div>';return;}
   const rows=positions.map(pos=>{
     const snap=snapshots[pos.pair]||{},price=snap.mid||pos.entry;
-    const jp=pos.pair&&pos.pair.includes('JPY'),pip=jp?0.01:0.0001;
+    const pip=getPip(pos.pair||'EUR/USD'),dec=getDecimals(pos.pair||'EUR/USD');
     const pips=(pos.dir==='BUY'?(price-pos.entry)/pip:(pos.entry-price)/pip),pnl=pips*pos.size*10;
     const pc=pnl>=0?'var(--green)':'var(--red)',dc=pos.dir==='BUY'?'var(--green)':'var(--red)';
     return '<tr><td style="font-weight:700">'+pos.pair+'</td><td style="color:'+dc+';font-weight:800">'+pos.dir+'</td>'+
-      '<td>'+Number(pos.entry).toFixed(jp?3:5)+'</td><td style="color:var(--accent)">'+Number(price).toFixed(jp?3:5)+'</td>'+
+      '<td>'+Number(pos.entry).toFixed(dec)+'</td><td style="color:var(--accent)">'+Number(price).toFixed(dec)+'</td>'+
       '<td style="color:'+pc+';font-weight:700">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</td>'+
       '<td style="color:'+pc+'">'+(pips>=0?'+':'')+pips.toFixed(1)+'p</td>'+
       '<td>'+pos.size+'</td><td style="color:var(--red);font-size:.65rem">'+(pos.sl||'—')+'</td>'+
@@ -693,7 +1124,7 @@ function renderHistorySession(){
     const pc=(t.pnl||0)>=0?'var(--green)':'var(--red)',dc=t.dir==='BUY'?'var(--green)':'var(--red)';
     return '<tr><td style="color:var(--muted)">'+(i+1)+'</td><td style="font-weight:700">'+t.pair+'</td>'+
       '<td style="color:'+dc+';font-weight:800">'+t.dir+'</td>'+
-      '<td>'+(t.entry?Number(t.entry).toFixed(t.pair&&t.pair.includes('JPY')?3:5):'—')+'</td>'+
+      '<td>'+(t.entry?Number(t.entry).toFixed(getDecimals(t.pair)):'—')+'</td>'+
       '<td style="color:'+pc+';font-weight:700">'+((t.pnl||0)>=0?'+':'')+'$'+(t.pnl||0).toFixed(2)+'</td>'+
       '<td style="color:var(--muted);font-size:.62rem">'+(t.closedBy||'')+'</td>'+
       '<td style="color:var(--muted);font-size:.6rem">'+(t.time||'—')+'</td></tr>';
@@ -718,7 +1149,7 @@ function renderHistoryFull(){
     const pc=(t.pnl||0)>=0?'var(--green)':'var(--red)';
     return '<tr><td style="color:var(--muted)">'+(history.length-i)+'</td><td style="font-weight:700">'+t.pair+'</td>'+
       '<td style="color:'+(t.dir==='BUY'?'var(--green)':'var(--red)')+';font-weight:800">'+t.dir+'</td>'+
-      '<td>'+(t.entry?Number(t.entry).toFixed(t.pair&&t.pair.includes('JPY')?3:5):'—')+'</td>'+
+      '<td>'+(t.entry?Number(t.entry).toFixed(getDecimals(t.pair)):'—')+'</td>'+
       '<td style="color:'+pc+';font-weight:700">'+((t.pnl||0)>=0?'+':'')+'$'+(t.pnl||0).toFixed(2)+'</td>'+
       '<td style="color:var(--muted)">'+(t.closedBy||'')+'</td><td style="color:var(--muted)">'+(t.time||'—')+'</td></tr>';
   }).join('');
@@ -731,29 +1162,37 @@ function renderHistory(){renderHistorySession();}
 //  CONNECT / DISCONNECT
 // ══════════════════════════════════════════════════
 async function checkProxy(){
-  const isLocal = window.location.protocol==='file:' || window.location.hostname==='localhost';
-  const statusEl = document.getElementById('proxy-status');
-  const noteEl   = document.getElementById('proxy-note');
-  const btnEl    = document.getElementById('conn-btn');
   try{
     const r=await fetch(PROXY+'/health');
     if(r.ok){
-      if(statusEl){statusEl.className='proxy-status ok';statusEl.innerHTML='✅ &nbsp;Server aktiv — redo att ansluta';}
-      if(noteEl) noteEl.style.display='none';
-      if(btnEl)  btnEl.disabled=false;
+      document.getElementById('proxy-status').className='proxy-status ok';
+      document.getElementById('proxy-status').innerHTML='✅ &nbsp;Python-proxy aktiv — redo att ansluta';
+      document.getElementById('proxy-note').style.display='none';
+      document.getElementById('conn-btn').disabled=false;
     }
   }catch{
-    if(isLocal){
-      if(statusEl){statusEl.className='proxy-status fail';statusEl.innerHTML='❌ &nbsp;Proxyn ej igång — kör: python server.py';}
-      if(noteEl) noteEl.style.display='block';
-      if(btnEl)  btnEl.disabled=true;
-      setTimeout(checkProxy,3000);
-    }else{
-      // Railway — servern borde alltid vara igång, försök igen
-      if(statusEl){statusEl.className='proxy-status checking';statusEl.innerHTML='⟳ &nbsp;Ansluter till server...';}
-      setTimeout(checkProxy,2000);
-    }
+    document.getElementById('proxy-status').className='proxy-status fail';
+    document.getElementById('proxy-status').innerHTML='❌ &nbsp;Proxyn ej igång — kör: python ig_proxy.py';
+    document.getElementById('proxy-note').style.display='block';
+    document.getElementById('conn-btn').disabled=true;
+    setTimeout(checkProxy,3000);
   }
+}
+
+function saveHistory(){
+  try{
+    localStorage.setItem('algofx_history', JSON.stringify(history.slice(0,200)));
+  }catch(e){}
+}
+
+function loadHistory(){
+  try{
+    const saved=localStorage.getItem('algofx_history');
+    if(saved){
+      history=JSON.parse(saved);
+      addLog('📋 Laddade '+history.length+' sparade trades från historik','system');
+    }
+  }catch(e){}
 }
 
 async function connect(){
@@ -768,10 +1207,13 @@ async function connect(){
   try{
     const session=await igLogin(apiKey,user,pass);
     localStorage.setItem('ig_key',apiKey);localStorage.setItem('ig_user',user);localStorage.setItem('ig_pass',pass);
+    savedCreds={key:apiKey,user,pass};
     document.getElementById('login').style.display='none';
-    document.getElementById('app').style.display='grid';
+    const appEl=document.getElementById('app');appEl.style.display='grid';
     document.getElementById('acc-chip').textContent=session.accountId||'';
     addLog('✅ Ansluten — konto: '+session.accountId,'system');
+    loadHistory();
+    renderPairList(); // Visa par-listan direkt
     try{
       const acc=await igGetAccounts();
       const myAcc=acc.accounts&&(acc.accounts.find(a=>a.accountId===session.accountId)||acc.accounts[0]);
@@ -780,10 +1222,14 @@ async function connect(){
         const a=document.getElementById('hdr-avail');if(a)a.textContent='$'+((myAcc.balance&&myAcc.balance.available)||0).toFixed(2);
       }
     }catch{}
+    await discoverEpics();
+    await autoFindWorkingEpics();
     addLog('📊 Laddar kurshistorik...','scan');
     await loadAllCandles();
     await refreshPositions();
     startSnapshotPoll();
+    startPositionMonitor();
+    startSessionKeepalive();
     renderPairList();
     updateHeader();
   }catch(e){
@@ -846,36 +1292,125 @@ async function loadAllCandles(){
 async function refreshPositions(){
   try{
     const data=await igGetPositions();
-    positions=(data.positions||[]).map(p=>({
-      id:p.position.dealId,
-      pair:Object.entries(PAIR_EPIC).find(([,e])=>e===p.market.epic)&&Object.entries(PAIR_EPIC).find(([,e])=>e===p.market.epic)[0]||p.market.epic,
-      epic:p.market.epic,dir:p.position.direction,entry:p.position.openLevel,
-      size:p.position.size,sl:p.position.stopLevel,tp:p.position.limitLevel,
-      time:new Date(p.position.createdDateUTC).toLocaleTimeString('sv-SE'),
-    }));
-    renderPositions();updateStats();renderPairList();
+    const raw=data.positions||[];
+    addLog('📋 IG rapporterar '+raw.length+' öppna positioner','system');
+    positions=raw.map(p=>{
+      // Try to match epic to pair name
+      let pair=Object.entries(PAIR_EPIC).find(([,e])=>e===p.market.epic)?.[0];
+      if(!pair){
+        // Try partial match
+        pair=Object.entries(PAIR_EPIC).find(([,e])=>
+          e.includes(p.market.epic.split('.')[2])||
+          p.market.epic.includes(e.split('.')[2])
+        )?.[0];
+      }
+      pair=pair||p.market.instrumentName||p.market.epic;
+      addLog('  → '+p.position.direction+' '+pair+' @ '+(p.position.openLevel||p.position.level||'?')+' ('+p.market.epic+')','system');
+      const entry=p.position.openLevel||p.position.level||p.position.limitedRiskPremium||0;
+      return {
+        id:p.position.dealId,
+        pair,
+        epic:p.market.epic,
+        dir:p.position.direction,
+        entry:parseFloat(entry)||0,
+        size:p.position.size||p.position.dealSize||1,
+        sl:p.position.stopLevel,
+        tp:p.position.limitLevel,
+        time:new Date(p.position.createdDateUTC).toLocaleTimeString('sv-SE'),
+      };
+    });
+    renderPositions();updateStats();updateBanner();renderPairList();
   }catch(e){addLog('⚠ Positioner: '+e.message,'error');}
 }
 
+function startPositionMonitor(){
+  // Kontrollerar var 10:e sekund om IG stängt några positioner (SL/TP träff)
+  setInterval(async()=>{
+    if(!positions.length) return;
+    try{
+      const data=await igGetPositions();
+      const igIds=new Set((data.positions||[]).map(p=>p.position.dealId));
+      // Hitta positioner som finns lokalt men inte längre på IG = stängda av SL/TP
+      const closed=positions.filter(p=>!igIds.has(p.id));
+      if(closed.length){
+        closed.forEach(pos=>{
+          const snap=snapshots[pos.pair]||{};
+          const price=snap.mid||pos.entry;
+          const pip=getPip(pos.pair),dec=getDecimals(pos.pair);
+          const pips=(pos.dir==='BUY'?(price-pos.entry)/pip:(pos.entry-price)/pip);
+          const pnl=pips*pos.size*10;
+          const reason=pnl>=0?'TP':'SL';
+          addLog('■ STÄNGD av '+reason+' — '+pos.dir+' '+pos.pair+' '+
+            (pnl>=0?'+':'')+'$'+pnl.toFixed(2)+' ('+
+            (pips>=0?'+':'')+pips.toFixed(1)+'p)',pnl>=0?'profit':'loss');
+          history.unshift({...pos,pnl:+pnl.toFixed(2),closedBy:reason,
+            time:new Date().toLocaleTimeString('sv-SE')});
+          if(history.length>200) history.pop();
+          saveHistory();
+        });
+        // Uppdatera lokal lista med det IG säger
+        positions=(data.positions||[]).map(p=>{
+          const pair=Object.entries(PAIR_EPIC).find(([,e])=>e===p.market.epic)?.[0]||p.market.epic;
+          return {id:p.position.dealId,pair,epic:p.market.epic,dir:p.position.direction,
+            entry:p.position.openLevel,size:p.position.size,sl:p.position.stopLevel,
+            tp:p.position.limitLevel,time:new Date(p.position.createdDateUTC).toLocaleTimeString('sv-SE')};
+        });
+        updateStats();renderPairList();
+        if(currentTab==='positions') renderPositionsTab();
+      }
+    }catch{}
+  },10000);
+}
+
+function processMarketDetails(details){
+  (details||[]).forEach(m=>{
+    const entry=Object.entries(PAIR_EPIC).find(([,e])=>e===m.instrument.epic);
+    if(!entry) return;
+    const pair=entry[0],bid=m.snapshot.bid,ask=m.snapshot.offer,mid=(bid+ask)/2;
+    snapshots[pair]={bid,ask,mid,change:m.snapshot.percentageChange};
+    const arr=candles[pair]||[];
+    if(arr.length){
+      const last=arr[arr.length-1],now=Date.now();
+      if(now-last.time<300000){arr[arr.length-1]={...last,close:mid,high:Math.max(last.high,mid),low:Math.min(last.low,mid)};}
+      else{arr.push({time:now,open:last.close,high:Math.max(last.close,mid),low:Math.min(last.close,mid),close:mid,volume:0});if(arr.length>300)arr.shift();}
+    }
+  });
+}
+
+function chunkArray(arr,size){
+  const chunks=[];
+  for(let i=0;i<arr.length;i+=size) chunks.push(arr.slice(i,i+size));
+  return chunks;
+}
+
+function startSessionKeepalive(){
+  // Ping session every 4 min to keep token alive (IG expires after ~5 min)
+  setInterval(async()=>{
+    try{
+      await igReq('GET','/session',null,'1');
+      addLog('🔄 Session förnyad','system');
+    }catch{}
+  }, 4*60*1000);
+}
+
 function startSnapshotPoll(){
+  let batchIndex=0;
+  const epics=PAIRS.map(p=>PAIR_EPIC[p]);
+  const batches=chunkArray(epics,4); // Max 4 epics per request
+
   snapshotTimer=setInterval(async()=>{
     try{
-      const data=await igGetSnapshot(PAIRS.map(p=>PAIR_EPIC[p]));
-      (data.marketDetails||[]).forEach(m=>{
-        const entry=Object.entries(PAIR_EPIC).find(([,e])=>e===m.instrument.epic);
-        if(!entry) return;
-        const pair=entry[0],bid=m.snapshot.bid,ask=m.snapshot.offer,mid=(bid+ask)/2;
-        snapshots[pair]={bid,ask,mid,change:m.snapshot.percentageChange};
-        const arr=candles[pair]||[];
-        if(arr.length){
-          const last=arr[arr.length-1],now=Date.now();
-          if(now-last.time<300000){arr[arr.length-1]={...last,close:mid,high:Math.max(last.high,mid),low:Math.min(last.low,mid)};}
-          else{arr.push({time:now,open:last.close,high:Math.max(last.close,mid),low:Math.min(last.close,mid),close:mid,volume:0});if(arr.length>300)arr.shift();}
-        }
-      });
-      renderPairList();updateHeader();
-    }catch{}
-  },6000);
+      // Rotera batchar — varje tick hämtar nästa batch
+      const batch=batches[batchIndex%batches.length];
+      batchIndex++;
+      const data=await igGetSnapshot(batch);
+      processMarketDetails(data.marketDetails);
+      renderPairList();updateHeader();updateBanner();
+    }catch(e){
+      // SSL-fel — vänta lite extra
+      if(e.message&&e.message.includes('SSL')) await sleep(2000);
+    }
+  },3000); // 3s interval, roterar batchar = alla par uppdateras var ~9s
 }
 
 // ══════════════════════════════════════════════════
@@ -883,41 +1418,204 @@ function startSnapshotPoll(){
 // ══════════════════════════════════════════════════
 async function openPosition(pair,dir,slPips,tpPips,reason,confidence){
   const lot=parseFloat(document.getElementById('s-lot').value)||1;
-  try{
-    addLog('📤 '+dir+' '+pair+'...','scan');
-    const res=await igOpenPos(PAIR_EPIC[pair],dir,lot,slPips,tpPips);
-    if(res.dealReference){
-      await sleep(1200);
-      const conf=await igGetConfirm(res.dealReference);
-      if(conf.status==='OPEN'||conf.dealStatus==='ACCEPTED'){
-        addLog('✅ '+dir+' '+pair+' @ '+conf.level+' | '+reason+' ('+confidence+'%)',dir==='BUY'?'buy':'sell');
+  addLog('📤 '+dir+' '+pair+'...','scan');
+
+  // Try each known epic format until one works
+  const epicsToTry=[PAIR_EPIC[pair],...(EPIC_FORMATS[pair]||[])].filter((v,i,a)=>a.indexOf(v)===i);
+
+  for(const epic of epicsToTry){
+    try{
+      const res=await igOpenPos(epic,dir,lot,slPips,tpPips);
+      await sleep(1500);
+      if(res&&res.dealReference){
+        let level='';
+        try{
+          const conf=await igGetConfirm(res.dealReference);
+          // Full debug log
+          addLog('📋 SVAR: '+JSON.stringify(conf).slice(0,200),'system');
+          // Only reject if dealStatus is explicitly REJECTED
+          if(conf.dealStatus==='REJECTED'){
+            const reason=conf.rejectReason||conf.reason||'REJECTED';
+            addLog('❌ Avvisad ('+epic+'): '+reason,'error');
+            continue; // try next epic
+          }
+          // Any other status (OPEN, ACCEPTED, AMENDED, null, undefined) = success
+          level=conf.level?' @ '+conf.level:(conf.price?' @ '+conf.price:'');
+        }catch(ce){addLog('⚠ Bekräftelsefel: '+ce.message,'error');}
+        // Success!
+        PAIR_EPIC[pair]=epic; // remember working epic
+        addLog('✅ '+dir+' '+pair+level+' ['+epic+'] | '+reason+' ('+confidence+'%)',dir==='BUY'?'buy':'sell');
         await refreshPositions();
-      }else{addLog('❌ Avvisad: '+(conf.rejectReason||conf.reason||JSON.stringify(conf)),'error');}
+        return;
+      }
+    }catch(e){
+      if(e.message&&(e.message.includes('MARKET_ROLLED')||e.message.includes('unauthorised')||e.message.includes('404'))){
+        addLog('⚠ '+epic+' ej tillgänglig ('+e.message.split(':')[0]+'), provar nästa...','scan');
+        continue; // try next format
+      }
+      addLog('❌ '+pair+': '+e.message,'error');
+      return;
     }
-  }catch(e){addLog('❌ '+pair+': '+e.message,'error');}
+  }
+  addLog('❌ Alla epic-format misslyckades för '+pair+'. Kolla att paret är tillgängligt på ditt konto.','error');
 }
 
 async function closePos(dealId){
   const pos=positions.find(p=>p.id===dealId);if(!pos)return;
   try{
     addLog('📤 Stänger '+pos.pair+'...','scan');
-    const res=await igClosePos(pos.id,pos.dir,pos.size);
-    if(res.dealReference){
-      await sleep(1200);
-      const conf=await igGetConfirm(res.dealReference);
-      const pnl=conf.profit||0;
-      addLog('■ STÄNGD '+pos.pair+' P&L: '+(pnl>=0?'+':'')+'$'+pnl,pnl>=0?'profit':'loss');
-      history.unshift({...pos,pnl,closedBy:'Manuell',time:new Date().toLocaleTimeString('sv-SE')});
-      if(history.length>200)history.pop();
-      await refreshPositions();renderHistory();updateStats();
+    const res=await igClosePos(pos);
+    await sleep(1500);
+    // Try to get confirmation, but don't fail if empty
+    let pnl=0;
+    if(res&&res.dealReference){
+      try{
+        const conf=await igGetConfirm(res.dealReference);
+        pnl=conf.profit||0;
+      }catch{}
     }
+    addLog('■ STÄNGD '+pos.pair+' P&L: '+(pnl>=0?'+':'')+'$'+pnl,pnl>=0?'profit':'loss');
+    history.unshift({...pos,pnl,closedBy:'Manuell',time:new Date().toLocaleTimeString('sv-SE')});
+    if(history.length>200)history.pop();
+    await refreshPositions();renderHistory();updateStats();
   }catch(e){addLog('❌ Stängningsfel: '+e.message,'error');}
+}
+
+function renderEpicsTable(markets){
+  const w=document.getElementById('epics-table-wrap');
+  if(!w) return;
+  if(!markets||!markets.length){
+    w.innerHTML='<div class="empty">Inga instrument hittade</div>';
+    return;
+  }
+  window._epicMap={};
+  let rows='';
+  markets.forEach(function(m,idx){
+    window._epicMap[idx]=m.epic;
+    const isActive=Object.values(PAIR_EPIC).includes(m.epic);
+    const activePair=Object.entries(PAIR_EPIC).find(function(e){return e[1]===m.epic;})?.[0]||'';
+    const tradeable=m.marketStatus==='TRADEABLE';
+    const pairOpts=Object.keys(PAIR_EPIC).map(function(p){
+      return '<option value="'+p+'">'+p+'</option>';
+    }).join('');
+    const lastCol=isActive
+      ? '<span style="color:var(--gold);font-size:.65rem;font-family:var(--mono)">✅ '+activePair+'</span>'
+      : (tradeable
+          ? '<select class="epic-pair-select" data-idx="'+idx+'" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.65rem;padding:2px 4px"><option value="">Välj par...</option>'+pairOpts+'</select>'
+          : '');
+    rows+='<tr style="opacity:'+(tradeable?'1':'0.5')+'">'
+      +'<td style="font-family:var(--mono);font-size:.68rem;color:var(--accent)">'+m.epic+'</td>'
+      +'<td style="font-size:.7rem">'+m.instrumentName+'</td>'
+      +'<td><span style="font-family:var(--mono);font-size:.65rem;color:'+(tradeable?'var(--green)':'var(--red)')+'">'+m.marketStatus+'</span></td>'
+      +'<td style="font-size:.65rem;color:var(--muted)">'+m.instrumentType+'</td>'
+      +'<td>'+lastCol+'</td>'
+      +'</tr>';
+  });
+  w.innerHTML='<table class="tbl"><thead><tr>'
+    +'<th>Epic</th><th>Namn</th><th>Status</th><th>Typ</th><th>Använd för</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+
+function setEpicForPair(epic, name, pair){
+  if(!pair) return;
+  PAIR_EPIC[pair]=epic;
+  if(!EPIC_FORMATS[pair]) EPIC_FORMATS[pair]=[];
+  if(!EPIC_FORMATS[pair].includes(epic)) EPIC_FORMATS[pair].unshift(epic);
+  addLog('💾 '+pair+' → '+epic+' ('+name.slice(0,30)+')','system');
+  renderEpicsTable(window._lastEpicsResult||[]);
+}
+
+function initEpicsTab(){
+  // Already has content, just focus search
+  const inp=document.getElementById('epic-search');
+  if(inp) setTimeout(()=>inp.focus(),100);
+}
+
+async function searchEpics(){
+  const term=document.getElementById('epic-search')?.value?.trim();
+  if(!term){addLog('Ange sökterm','error');return;}
+  const w=document.getElementById('epics-table-wrap');
+  if(w) w.innerHTML='<div class="empty">Söker...</div>';
+  try{
+    const res=await igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+    const markets=res.markets||[];
+    window._lastEpicsResult=markets;
+    addLog('🔍 Hittade '+markets.length+' instrument för "'+term+'"','scan');
+    renderEpicsTable(markets);
+  }catch(e){addLog('❌ Sökning misslyckades: '+e.message,'error');}
+}
+
+async function loadForexEpics(){
+  const w=document.getElementById('epics-table-wrap');
+  if(w) w.innerHTML='<div class="empty">Laddar forex och guld...</div>';
+  const terms=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CHF','USD/CAD','NZD/USD','EUR/GBP','Gold'];
+  let all=[];
+  for(const term of terms){
+    try{
+      const res=await igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+      (res.markets||[]).forEach(m=>{
+        if(!all.find(x=>x.epic===m.epic)) all.push(m);
+      });
+    }catch{}
+    await sleep(400);
+  }
+  all.sort((a,b)=>(a.marketStatus==='TRADEABLE'?-1:1));
+  window._lastEpicsResult=all;
+  addLog('📋 Laddade '+all.length+' instrument','system');
+  renderEpicsTable(all);
+}
+
+async function testEpics(){
+  addLog('🔍 Söker ALLA tillgängliga marknader för '+selected+' på ditt konto...','scan');
+  // Search with multiple terms to find what IG has
+  const pair=selected;
+  const currency=pair.replace('/','');
+  const base=pair.split('/')[0];
+  const searchTerms=[currency, base+' USD', base+'/USD', pair, base];
+
+  let found=[];
+  for(const term of searchTerms){
+    try{
+      const res=await igReq('GET','/markets?searchTerm='+encodeURIComponent(term),null,'1');
+      const markets=res.markets||[];
+      markets.forEach(m=>{
+        if(!found.find(f=>f.epic===m.epic)){
+          found.push(m);
+        }
+      });
+    }catch(e){}
+    await sleep(400);
+  }
+
+  if(!found.length){
+    addLog('❌ Inga marknader hittade för '+selected,'error');
+    return;
+  }
+
+  addLog('📋 Hittade '+found.length+' marknader — visar TRADEABLE:','system');
+  found.filter(m=>m.marketStatus==='TRADEABLE').forEach(m=>{
+    addLog('✅ [KLICKA FÖR ATT ANVÄNDA] '+m.epic+' — '+m.instrumentName,'system');
+    // Auto-set the first tradeable epic
+  });
+  found.filter(m=>m.marketStatus!=='TRADEABLE').slice(0,3).forEach(m=>{
+    addLog('⚠ '+m.marketStatus+': '+m.epic+' — '+m.instrumentName,'scan');
+  });
+
+  // Auto-use first tradeable epic
+  const best=found.find(m=>m.marketStatus==='TRADEABLE');
+  if(best){
+    PAIR_EPIC[selected]=best.epic;
+    addLog('💾 Sätter '+best.epic+' för '+selected+' — prova KÖP nu!','system');
+  }
 }
 
 async function manualTrade(dir){
   const lot=parseFloat(document.getElementById('lot-size').value)||1;
   document.getElementById('s-lot').value=lot;
-  await openPosition(selected,dir,30,60,'Manuell',100);
+  const sl=isGold(selected)?200:30;
+  const tp=isGold(selected)?400:60;
+  await openPosition(selected,dir,sl,tp,'Manuell',100);
 }
 
 // ══════════════════════════════════════════════════
@@ -936,14 +1634,14 @@ async function runScan(){
     if(positions.filter(p=>p.pair===pair).length>0) continue;
     if(positions.length>=maxPos) break;
     const cs=candles[pair];if(!cs||cs.length<60) continue;
-    const ind=computeAll(cs),n=cs.length-1;
+    const ind=computeAll(cs,pair),n=cs.length-1;
     if(ind.rsi[n]===null) continue;
-    const sig=computeSignal(ind,n);if(Math.abs(sig.score)<sigThreshold) continue;
+    const sig=computeSignal(ind,n,pair);if(Math.abs(sig.score)<sigThreshold) continue;
     try{
       const ai=await queryAI(pair,ind,n,sig);
       addLog('🤖 '+pair+': '+ai.action+' '+ai.confidence+'% — '+ai.reason,'ai');
       if(ai.action!=='HOLD'&&ai.confidence>=minConf)
-        await openPosition(pair,ai.action,ai.sl_pips||30,ai.tp_pips||60,ai.reason,ai.confidence);
+        await openPosition(pair,ai.action,ai.sl_pips||(isGold(pair)?200:30),ai.tp_pips||(isGold(pair)?400:60),ai.reason,ai.confidence);
     }catch(e){addLog('⚠ AI '+pair+': '+e.message,'error');}
     await sleep(700);
   }
@@ -1009,6 +1707,32 @@ function toggleBot(forceOff=false){
 document.getElementById('conn-btn').disabled=true;
 checkProxy();
 
+// Tab click handling via event delegation
+document.addEventListener('DOMContentLoaded', function(){
+  const tabsEl = document.getElementById('main-tabs');
+  if(tabsEl){
+    tabsEl.addEventListener('click', function(e){
+      const tab = e.target.closest('[data-tab]');
+      if(!tab) return;
+      const name = tab.getAttribute('data-tab');
+      setTab(name, tab);
+    });
+  }
+});
+
+// Fallback: also wire up immediately in case DOM already loaded
+(function(){
+  const tabsEl = document.getElementById('main-tabs');
+  if(tabsEl && !tabsEl._bound){
+    tabsEl._bound = true;
+    tabsEl.addEventListener('click', function(e){
+      const tab = e.target.closest('[data-tab]');
+      if(!tab) return;
+      setTab(tab.getAttribute('data-tab'), tab);
+    });
+  }
+})();
+
 (function loadSaved(){
   const k=localStorage.getItem('ig_key'),u=localStorage.getItem('ig_user'),p=localStorage.getItem('ig_pass');
   if(k) document.getElementById('inp-key').value=k;
@@ -1026,6 +1750,40 @@ function clearSaved(){
   document.getElementById('conn-btn').textContent='ANSLUT TILL IG DEMO';
   const cb=document.getElementById('clear-btn');if(cb)cb.style.display='none';
 }
+
+// Banner close button delegation
+document.addEventListener('click',function(e){
+  const btn=e.target.closest('.banner-close-btn');
+  if(btn&&typeof closePos==='function') closePos(btn.getAttribute('data-closeid'));
+});
+
+// Wire up test epics button
+document.addEventListener('click',function(e){
+  if(e.target.id==='test-epics-btn'||e.target.closest('#test-epics-btn')){
+    if(typeof testEpics==='function') testEpics();
+  }
+  if(e.target.id==='epic-search-btn') searchEpics();
+  if(e.target.id==='epic-load-all-btn') loadForexEpics();
+});
+
+// Epic select delegation
+document.addEventListener('change',function(e){
+  const sel=e.target.closest('.epic-pair-select');
+  if(!sel) return;
+  const idx=parseInt(sel.getAttribute('data-idx'));
+  const pair=sel.value;
+  if(!pair||!window._epicMap) return;
+  const epic=window._epicMap[idx];
+  if(epic&&pair){
+    setEpicForPair(epic,'instrument',pair);
+    renderEpicsTable(window._lastEpicsResult||[]);
+  }
+});
+
+// Epic search on Enter key
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&document.activeElement?.id==='epic-search') searchEpics();
+});
 
 ['inp-key','inp-user','inp-pass'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
