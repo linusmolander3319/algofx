@@ -420,7 +420,7 @@ input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%
 // ══════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════
-const PROXY = 'http://localhost:3001';
+const PROXY = (window.location.protocol==='file:'||window.location.hostname==='localhost') ? 'http://localhost:3001' : window.location.origin;
 // Epic-koder — söks automatiskt från ditt konto vid inloggning
 // Fallback till vanliga koder om sökning misslyckas
 let PAIR_EPIC = {
@@ -1162,6 +1162,18 @@ function renderHistory(){renderHistorySession();}
 //  CONNECT / DISCONNECT
 // ══════════════════════════════════════════════════
 async function checkProxy(){
+  const isRailway=window.location.hostname.includes('railway.app')||
+                  window.location.hostname.includes('up.railway');
+  if(isRailway){
+    // On Railway, server is always the proxy - skip check
+    const s=document.getElementById('proxy-status');
+    const b=document.getElementById('conn-btn');
+    const n=document.getElementById('proxy-note');
+    if(s){s.className='proxy-status ok';s.innerHTML='✅ &nbsp;Railway-server aktiv — redo att ansluta';}
+    if(n) n.style.display='none';
+    if(b) b.disabled=false;
+    return;
+  }
   try{
     const r=await fetch(PROXY+'/health');
     if(r.ok){
